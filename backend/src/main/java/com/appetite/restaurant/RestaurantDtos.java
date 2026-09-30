@@ -1,5 +1,6 @@
 package com.appetite.restaurant;
 
+import com.appetite.common.validation.ValidationPatterns;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -29,7 +30,8 @@ public final class RestaurantDtos {
 
     public record UpdateRestaurantRequest(
             @NotBlank(message = "Restaurant name is required")
-            @Size(max = 120, message = "Restaurant name must be at most 120 characters")
+            @Pattern(regexp = ValidationPatterns.RESTAURANT_NAME,
+                    message = "Restaurant name must be 2-120 characters (letters, numbers, spaces and & ' . , ! -)")
             String name,
 
             @Size(max = 500, message = "Description must be at most 500 characters")
@@ -41,7 +43,7 @@ public final class RestaurantDtos {
             @Size(max = 200, message = "Address must be at most 200 characters")
             String address,
 
-            @Pattern(regexp = "^$|^[+0-9 ()-]{6,20}$", message = "Phone number is not valid")
+            @Pattern(regexp = ValidationPatterns.PHONE_OPTIONAL, message = "Phone number is not valid")
             String phone
     ) {
     }

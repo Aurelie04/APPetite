@@ -3,6 +3,7 @@ package com.appetite.restaurant;
 import com.appetite.restaurant.RestaurantDtos.RestaurantDto;
 import com.appetite.restaurant.RestaurantDtos.UpdateRestaurantRequest;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,11 +30,13 @@ public class RestaurantController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("hasRole('RESTAURANT')")
     public RestaurantDto mine(@AuthenticationPrincipal UserDetails principal) {
         return restaurantService.getForOwner(principal.getUsername());
     }
 
     @PutMapping("/me")
+    @PreAuthorize("hasRole('RESTAURANT')")
     public RestaurantDto updateMine(@AuthenticationPrincipal UserDetails principal,
                                     @Valid @RequestBody UpdateRestaurantRequest request) {
         return restaurantService.updateForOwner(principal.getUsername(), request);

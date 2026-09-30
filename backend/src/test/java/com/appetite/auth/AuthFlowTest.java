@@ -38,7 +38,7 @@ class AuthFlowTest {
     @Test
     void registerLoginForgotAndResetPassword() throws Exception {
         String register = """
-                {"email":"Jane@Example.com","password":"secret123"}
+                {"email":"Jane@Example.com","password":"Secret@123"}
                 """;
         mvc.perform(post("/api/auth/register/client").contentType(MediaType.APPLICATION_JSON).content(register))
                 .andExpect(status().isCreated())
@@ -54,13 +54,15 @@ class AuthFlowTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Invalid email or password"));
 
-        String token = extract(login("secret123"), "token");
+        String token = extract(login("Secret@123"), "token");
 
         mvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("jane@example.com"));
 
-        mvc.perform(get("/api/users/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/users/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Please sign in to continue."));
 
         MvcResult forgot = mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"jane@example.com\"}"))
@@ -69,29 +71,81 @@ class AuthFlowTest {
         String resetToken = extract(forgot, "resetUrl").replaceAll(".*token=", "");
 
         mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"token\":\"" + resetToken + "\",\"password\":\"newSecret456\"}"))
+                        .content("{\"token\":\"" + resetToken + "\",\"password\":\"weakpass\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").exists());
+
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"" + resetToken + "\",\"password\":\"NewSecret#456\"}"))
                 .andExpect(status().isOk());
 
         mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"token\":\"" + resetToken + "\",\"password\":\"another789\"}"))
-                .andExpect(status().isBadRequest());
+                        .content("{\"token\":\"" + resetToken + "\",\"password\":\"Another!789\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("This reset link is invalid or has expired"));
 
-        assertThat(extract(login("newSecret456"), "token")).isNotBlank();
+        assertThat(extract(login("NewSecret#456"), "token")).isNotBlank();
     }
 
     @Test
-    void validationErrorsAreReported() throws Exception {
+    void weakPasswordsAreRejectedWithTheMissingRules() throws Exception {
         mvc.perform(post("/api/auth/register/client").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"not-an-email\",\"password\":\"short\"}"))
+                        .content("{\"email\":\"weak@example.com\",\"password\":\"password1\"}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors.email").value("Email is not valid"))
-                .andExpect(jsonPath("$.errors.password").exists());
+                .andExpect(jsonPath("$.errors.password")
+                        .value("Password must contain an uppercase letter and a special character"));
+
+        mvc.perform(post("/api/auth/register/client").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"weak@example.com\",\"password\":\"Sh0rt!\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("Password must contain at least 8 characters"));
+
+        mvc.perform(post("/api/auth/register/client").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"weak@example.com\",\"password\":\"Has Space1!\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("Password must not contain spaces"));
+    }
+
+    @Test
+    void invalidEmailsAndNamesAreRejected() throws Exception {
+        for (String email : new String[]{"not-an-email", "user@localhost", "user@domain.c", "a b@example.com"}) {
+            mvc.perform(post("/api/auth/register/client").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"" + email + "\",\"password\":\"Secret@123\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors.email").exists());
+        }
 
         mvc.perform(post("/api/auth/register/restaurant").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\":\"\",\"restaurantName\":\"\",\"email\":\"a@b.co\",\"password\":\"secret123\"}"))
+                        .content("""
+                                {"fullName":"J0hn <script>","restaurantName":"@@@","email":"owner@example.com","password":"Secret@123"}
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.fullName").exists())
-                .andExpect(jsonPath("$.errors.restaurantName").value("Restaurant name is required"));
+                .andExpect(jsonPath("$.errors.restaurantName").exists());
+
+        mvc.perform(post("/api/auth/register/restaurant").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fullName":"Aurélie N'Dour-Nana","restaurantName":"Chez Aurélie & Co.","email":"aurelie@example.fr","password":"Secret@123"}
+                                """))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void repeatedFailedLoginsLockTheAccountTemporarily() throws Exception {
+        mvc.perform(post("/api/auth/register/client").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"locked@example.com\",\"password\":\"Secret@123\"}"))
+                .andExpect(status().isCreated());
+
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"locked@example.com\",\"password\":\"Wrong@123\"}"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"locked@example.com\",\"password\":\"Secret@123\"}"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("Too many failed sign-in attempts")));
     }
 
     @Test

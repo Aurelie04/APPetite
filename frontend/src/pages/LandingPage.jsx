@@ -1,10 +1,10 @@
-import { Link, Navigate } from 'react-router-dom';
-import { BadgePercent, Clock, Flame, Leaf, Star, Store, Truck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BadgePercent, Clock, Flame, LayoutDashboard, Leaf, LogOut, Star, Store, Truck } from 'lucide-react';
 import ColorfulBackground from '../components/ColorfulBackground.jsx';
 import BlendedLogo from '../components/BlendedLogo.jsx';
 import LoginForm from '../components/LoginForm.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { dashboardPath } from '../utils/roles.js';
+import { ROLES, dashboardPath, displayName } from '../utils/roles.js';
 
 const FEATURES = [
   { icon: Truck, label: 'Fast delivery', tone: 'orange' },
@@ -19,8 +19,8 @@ const STATS = [
 ];
 
 export default function LandingPage() {
-  const { isAuthenticated, user } = useAuth();
-  if (isAuthenticated) return <Navigate to={dashboardPath(user?.role)} replace />;
+  const { isAuthenticated, user, logout } = useAuth();
+  const isRestaurant = user?.role === ROLES.RESTAURANT;
 
   return (
     <div className="page page--landing">
@@ -32,12 +32,20 @@ export default function LandingPage() {
           <span className="nav__name">Appétite</span>
         </Link>
         <div className="nav__actions">
-          <Link to="/register/restaurant" className="nav__link">
-            <Store size={16} aria-hidden="true" /> For restaurants
-          </Link>
-          <Link to="/register" className="btn btn--ghost">
-            Sign up
-          </Link>
+          {isAuthenticated ? (
+            <Link to={dashboardPath(user?.role)} className="btn btn--ghost">
+              <LayoutDashboard size={16} aria-hidden="true" /> My dashboard
+            </Link>
+          ) : (
+            <>
+              <Link to="/register/restaurant" className="nav__link">
+                <Store size={16} aria-hidden="true" /> For restaurants
+              </Link>
+              <Link to="/register" className="btn btn--ghost">
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
       </header>
 
@@ -82,32 +90,58 @@ export default function LandingPage() {
           </dl>
         </section>
 
-        <section className="card card--login" aria-labelledby="login-title">
-          <header className="card__header">
-            <span className="card__eyebrow">Welcome back</span>
-            <h2 id="login-title" className="card__title">
-              Sign in to order
-            </h2>
-            <p className="card__subtitle">Your next favourite meal is waiting.</p>
-          </header>
-
-          <LoginForm />
-
-          <footer className="card__footer card__footer--stacked">
-            <span>
-              New to Appétite?{' '}
-              <Link to="/register" className="link link--strong">
-                Create an account
-              </Link>
+        {isAuthenticated ? (
+          <section className="card card--login card--signed-in" aria-labelledby="welcome-title">
+            <span className="user-chip__avatar user-chip__avatar--lg" aria-hidden="true">
+              {displayName(user).charAt(0).toUpperCase()}
             </span>
-            <span>
-              Own a restaurant?{' '}
-              <Link to="/register/restaurant" className="link link--strong">
-                Register it here
-              </Link>
-            </span>
-          </footer>
-        </section>
+            <header className="card__header">
+              <span className="card__eyebrow">You're signed in</span>
+              <h2 id="welcome-title" className="card__title">
+                Welcome back, {displayName(user)}!
+              </h2>
+              <p className="card__subtitle">
+                {isRestaurant
+                  ? 'Manage your restaurant profile and see how clients find you.'
+                  : 'Browse every restaurant on Appétite and find your next meal.'}
+              </p>
+            </header>
+            <Link to={dashboardPath(user?.role)} className="btn btn--primary btn--block">
+              <LayoutDashboard size={18} aria-hidden="true" />
+              {isRestaurant ? 'Go to my restaurant dashboard' : 'Go to my dashboard'}
+            </Link>
+            <button type="button" className="btn btn--ghost btn--block" onClick={logout}>
+              <LogOut size={16} aria-hidden="true" /> Sign out
+            </button>
+          </section>
+        ) : (
+          <section className="card card--login" aria-labelledby="login-title">
+            <header className="card__header">
+              <span className="card__eyebrow">Welcome back</span>
+              <h2 id="login-title" className="card__title">
+                Sign in to order
+              </h2>
+              <p className="card__subtitle">Your next favourite meal is waiting.</p>
+            </header>
+
+            <LoginForm />
+
+            <footer className="card__footer card__footer--stacked">
+              <span>
+                New to Appétite?{' '}
+                <Link to="/register" className="link link--strong">
+                  Create an account
+                </Link>
+              </span>
+              <span>
+                Own a restaurant?{' '}
+                <Link to="/register/restaurant" className="link link--strong">
+                  Register it here
+                </Link>
+              </span>
+            </footer>
+          </section>
+        )}
       </main>
 
       <footer className="site-footer">© {new Date().getFullYear()} Appétite · Fast-Food &amp; Délices</footer>

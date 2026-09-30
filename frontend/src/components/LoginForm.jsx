@@ -6,8 +6,7 @@ import { dashboardPath } from '../utils/roles.js';
 import FormField from './FormField.jsx';
 import Alert from './Alert.jsx';
 import SubmitButton from './SubmitButton.jsx';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { validateEmail } from '../utils/validation.js';
 
 export default function LoginForm() {
   const { login } = useAuth();
@@ -16,6 +15,7 @@ export default function LoginForm() {
   const [remember, setRemember] = useState(true);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
+  const [serverErrorType, setServerErrorType] = useState('error');
   const [loading, setLoading] = useState(false);
 
   const update = (field) => (e) => {
@@ -25,7 +25,8 @@ export default function LoginForm() {
 
   const validate = () => {
     const next = {};
-    if (!EMAIL_RE.test(form.email.trim())) next.email = 'Please enter a valid email address';
+    const emailError = validateEmail(form.email);
+    if (emailError) next.email = emailError;
     if (!form.password) next.password = 'Please enter your password';
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -42,6 +43,7 @@ export default function LoginForm() {
       navigate(dashboardPath(user.role));
     } catch (err) {
       setServerError(err.message);
+      setServerErrorType(err.status === 429 ? 'warning' : 'error');
       setErrors(err.fieldErrors ?? {});
     } finally {
       setLoading(false);
@@ -50,7 +52,7 @@ export default function LoginForm() {
 
   return (
     <form className="form" onSubmit={handleSubmit} noValidate>
-      {serverError && <Alert>{serverError}</Alert>}
+      {serverError && <Alert type={serverErrorType}>{serverError}</Alert>}
 
       <FormField
         label="Email address"

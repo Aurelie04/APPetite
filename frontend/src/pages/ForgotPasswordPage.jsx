@@ -6,8 +6,7 @@ import FormField from '../components/FormField.jsx';
 import Alert from '../components/Alert.jsx';
 import SubmitButton from '../components/SubmitButton.jsx';
 import { authApi } from '../api/client.js';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { validateEmail } from '../utils/validation.js';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -19,8 +18,9 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
-    if (!EMAIL_RE.test(email.trim())) {
-      setError('Please enter a valid email address');
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
       return;
     }
 
@@ -39,6 +39,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthLayout
       title="Forgot your password?"
+      crumb="Forgot password"
       subtitle="Enter the email linked to your account and we'll send you a reset link."
       footer={
         <Link to="/" className="link link--strong link--icon">

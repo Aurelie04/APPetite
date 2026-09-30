@@ -41,7 +41,7 @@ class RestaurantFlowTest {
     void restaurantRegistersManagesProfileAndClientsSeeIt() throws Exception {
         MvcResult registered = mvc.perform(post("/api/auth/register/restaurant").contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"fullName":"Marco Rossi","restaurantName":"Pizza Napoli","email":"marco@napoli.com","password":"secret123"}
+                                {"fullName":"Marco Rossi","restaurantName":"Pizza Napoli","email":"marco@napoli.com","password":"Secret@123"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.user.role").value("RESTAURANT"))
@@ -64,7 +64,7 @@ class RestaurantFlowTest {
 
         String clientToken = extractToken(mvc.perform(post("/api/auth/register/client")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"hungry@client.com\",\"password\":\"secret123\"}"))
+                        .content("{\"email\":\"hungry@client.com\",\"password\":\"Secret@123\"}"))
                 .andExpect(status().isCreated())
                 .andReturn());
 
@@ -74,9 +74,19 @@ class RestaurantFlowTest {
                 .andExpect(jsonPath("$[*].description", hasItem("Wood-fired pizza")));
 
         mvc.perform(get("/api/restaurants/me").header("Authorization", "Bearer " + clientToken))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("You don't have permission to access this resource."));
+
+        mvc.perform(put("/api/restaurants/me").header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"<b>hack</b>\",\"phone\":\"call me\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.name").exists())
+                .andExpect(jsonPath("$.errors.phone").exists());
 
         mvc.perform(get("/api/restaurants")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/restaurants").header("Authorization", "Bearer not.a.valid.jwt"))
+                .andExpect(status().isUnauthorized());
     }
 
     private static String extractToken(MvcResult result) throws Exception {

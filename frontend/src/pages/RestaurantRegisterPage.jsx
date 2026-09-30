@@ -7,9 +7,10 @@ import FormField from '../components/FormField.jsx';
 import Alert from '../components/Alert.jsx';
 import SubmitButton from '../components/SubmitButton.jsx';
 import TermsCheckbox from '../components/TermsCheckbox.jsx';
+import PasswordStrength from '../components/PasswordStrength.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import useForm from '../hooks/useForm.js';
-import { validateCredentials } from '../utils/validation.js';
+import { validateCredentials, validatePersonName, validateRestaurantName } from '../utils/validation.js';
 import { dashboardPath } from '../utils/roles.js';
 
 export default function RestaurantRegisterPage() {
@@ -30,8 +31,10 @@ export default function RestaurantRegisterPage() {
     e.preventDefault();
     setServerError('');
     const validation = validateCredentials(values, acceptTerms);
-    if (!values.fullName.trim()) validation.fullName = 'Please enter your name';
-    if (!values.restaurantName.trim()) validation.restaurantName = 'Please enter the name of your restaurant';
+    const fullNameError = validatePersonName(values.fullName);
+    const restaurantNameError = validateRestaurantName(values.restaurantName);
+    if (fullNameError) validation.fullName = fullNameError;
+    if (restaurantNameError) validation.restaurantName = restaurantNameError;
     setErrors(validation);
     if (Object.keys(validation).length) return;
 
@@ -55,6 +58,7 @@ export default function RestaurantRegisterPage() {
   return (
     <AuthLayout
       title="Register your restaurant"
+      crumb="Restaurant sign up"
       subtitle="Create your restaurant admin account and start reaching hungry clients."
       footer={
         <>
@@ -93,7 +97,7 @@ export default function RestaurantRegisterPage() {
             icon={Lock}
             type="password"
             autoComplete="new-password"
-            placeholder="Min. 8 characters"
+            placeholder="e.g. Burger@2026"
             {...bind('password')}
           />
           <FormField
@@ -105,6 +109,7 @@ export default function RestaurantRegisterPage() {
             {...bind('confirmPassword')}
           />
         </div>
+        <PasswordStrength password={values.password} />
 
         <TermsCheckbox
           checked={acceptTerms}

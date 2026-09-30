@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import useApiResource from '../hooks/useApiResource.js';
 import useForm from '../hooks/useForm.js';
 import { CUISINES } from '../utils/cuisines.js';
-import { PHONE_RE } from '../utils/validation.js';
+import { PHONE_RE, validateRestaurantName } from '../utils/validation.js';
 import { displayName } from '../utils/roles.js';
 
 const DESCRIPTION_MAX = 500;
@@ -40,7 +40,8 @@ export default function RestaurantDashboard() {
     setSaveError('');
     setSaved(false);
     const validation = {};
-    if (!values.name.trim()) validation.name = 'Restaurant name is required';
+    const nameError = validateRestaurantName(values.name);
+    if (nameError) validation.name = nameError;
     if (values.phone.trim() && !PHONE_RE.test(values.phone.trim())) validation.phone = 'Please enter a valid phone number';
     if (values.description.length > DESCRIPTION_MAX) validation.description = `Keep it under ${DESCRIPTION_MAX} characters`;
     setErrors(validation);

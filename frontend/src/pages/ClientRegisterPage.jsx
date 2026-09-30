@@ -7,6 +7,7 @@ import FormField from '../components/FormField.jsx';
 import Alert from '../components/Alert.jsx';
 import SubmitButton from '../components/SubmitButton.jsx';
 import TermsCheckbox from '../components/TermsCheckbox.jsx';
+import PasswordStrength from '../components/PasswordStrength.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import useForm from '../hooks/useForm.js';
 import { validateCredentials } from '../utils/validation.js';
@@ -42,6 +43,7 @@ export default function ClientRegisterPage() {
   return (
     <AuthLayout
       title="Create your client account"
+      crumb="Client sign up"
       subtitle="Discover every restaurant on Appétite and get your favourite food fast."
       footer={
         <>
@@ -70,7 +72,7 @@ export default function ClientRegisterPage() {
             icon={Lock}
             type="password"
             autoComplete="new-password"
-            placeholder="Min. 8 characters"
+            placeholder="e.g. Burger@2026"
             {...bind('password')}
           />
           <FormField
@@ -82,6 +84,7 @@ export default function ClientRegisterPage() {
             {...bind('confirmPassword')}
           />
         </div>
+        <PasswordStrength password={values.password} />
 
         <TermsCheckbox
           checked={acceptTerms}

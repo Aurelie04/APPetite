@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
+import { House, LogOut } from 'lucide-react';
 import ColorfulBackground from './ColorfulBackground.jsx';
 import BlendedLogo from './BlendedLogo.jsx';
+import PageNav from './PageNav.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { ROLES, displayName } from '../utils/roles.js';
 
@@ -18,6 +19,9 @@ export default function DashboardLayout({ children }) {
           <span className="nav__name">Appétite</span>
         </Link>
         <div className="nav__actions">
+          <Link to="/" className="nav__link">
+            <House size={16} aria-hidden="true" /> <span className="hide-sm">Home</span>
+          </Link>
           <div className="user-chip">
             <span className="user-chip__avatar" aria-hidden="true">
               {displayName(user).charAt(0).toUpperCase()}
@@ -34,7 +38,10 @@ export default function DashboardLayout({ children }) {
           </button>
         </div>
       </header>
-      <main className="dashboard">{children}</main>
+      <main className="dashboard">
+        <PageNav current={isRestaurant ? 'My restaurant' : 'Restaurants'} className="page-nav--dashboard" />
+        {children}
+      </main>
     </div>
   );
 }

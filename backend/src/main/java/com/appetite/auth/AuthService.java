@@ -11,6 +11,7 @@ import com.appetite.common.ApiException;
 import com.appetite.restaurant.Restaurant;
 import com.appetite.restaurant.RestaurantRepository;
 import com.appetite.security.JwtService;
+import com.appetite.security.LoginAttemptService;
 import com.appetite.user.Role;
 import com.appetite.user.User;
 import com.appetite.user.UserDto;
@@ -19,6 +20,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +44,8 @@ public class AuthService {
     private final RestaurantRepository restaurantRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final LoginAttemptService loginAttemptService;
     private final JwtService jwtService;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -51,6 +57,8 @@ public class AuthService {
                        RestaurantRepository restaurantRepository,
                        PasswordResetTokenRepository resetTokenRepository,
                        PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager,
+                       LoginAttemptService loginAttemptService,
                        JwtService jwtService,
                        @Value("${app.frontend-url}") String frontendUrl,
                        @Value("${app.password-reset.expiration-minutes}") long resetTokenMinutes,
@@ -59,6 +67,8 @@ public class AuthService {
         this.restaurantRepository = restaurantRepository;
         this.resetTokenRepository = resetTokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.loginAttemptService = loginAttemptService;
         this.jwtService = jwtService;
         this.frontendUrl = frontendUrl;
         this.resetTokenTtl = Duration.ofMinutes(resetTokenMinutes);
@@ -94,8 +104,18 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.email()))
-                .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
+        String email = normalizeEmail(request.email());
+        loginAttemptService.ensureNotBlocked(email);
+        try {
+            authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated(email, request.password()));
+        } catch (AuthenticationException ex) {
+            loginAttemptService.recordFailure(email);
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+        loginAttemptService.recordSuccess(email);
+
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
         return toAuthResponse(user);
     }
@@ -125,6 +145,7 @@ public class AuthService {
         User user = token.getUser();
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         token.markUsed();
+        loginAttemptService.recordSuccess(user.getEmail());
 
         return new MessageResponse("Your password has been updated. You can now sign in.");
     }

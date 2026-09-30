@@ -5,7 +5,9 @@ import AuthLayout from '../components/AuthLayout.jsx';
 import FormField from '../components/FormField.jsx';
 import Alert from '../components/Alert.jsx';
 import SubmitButton from '../components/SubmitButton.jsx';
+import PasswordStrength from '../components/PasswordStrength.jsx';
 import { authApi } from '../api/client.js';
+import { validateNewPassword } from '../utils/validation.js';
 
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -24,9 +26,7 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setServerError('');
-    const next = {};
-    if (form.password.length < 8) next.password = 'Password must be at least 8 characters';
-    if (form.confirmPassword !== form.password) next.confirmPassword = 'Passwords do not match';
+    const next = validateNewPassword(form);
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -36,6 +36,7 @@ export default function ResetPasswordPage() {
       setSuccessMessage(res.message);
     } catch (err) {
       setServerError(err.message);
+      setErrors(err.fieldErrors ?? {});
     } finally {
       setLoading(false);
     }
@@ -49,7 +50,7 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthLayout title="Invalid reset link" footer={backLink}>
+      <AuthLayout title="Invalid reset link" crumb="Reset password" footer={backLink}>
         <Alert>This password reset link is missing its token. Please request a new one.</Alert>
         <Link to="/forgot-password" className="btn btn--primary btn--block">
           Request a new link
@@ -59,7 +60,12 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <AuthLayout title="Choose a new password" subtitle="Make it strong — at least 8 characters." footer={backLink}>
+    <AuthLayout
+      title="Choose a new password"
+      crumb="Reset password"
+      subtitle="Make it strong — mix upper and lower case letters, numbers and a special character."
+      footer={backLink}
+    >
       {successMessage ? (
         <div className="form">
           <Alert type="success">{successMessage}</Alert>
@@ -76,11 +82,12 @@ export default function ResetPasswordPage() {
             type="password"
             name="password"
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder="e.g. Burger@2026"
             value={form.password}
             onChange={update('password')}
             error={errors.password}
           />
+          <PasswordStrength password={form.password} />
           <FormField
             label="Confirm new password"
             icon={ShieldCheck}
