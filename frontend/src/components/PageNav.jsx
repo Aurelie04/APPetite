@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, House } from 'lucide-react';
 
 /** Back arrow + quick link to the landing page, shown at the top of every page except the landing page. */
-export default function PageNav({ current, fallback = '/', className = '' }) {
+export default function PageNav({ current, trail = [], fallback = '/', className = '' }) {
   const navigate = useNavigate();
 
   const goBack = () => {
@@ -23,6 +23,14 @@ export default function PageNav({ current, fallback = '/', className = '' }) {
             <House size={15} aria-hidden="true" /> Home
           </Link>
         </li>
+        {trail.map(({ label, to }) => (
+          <li key={to}>
+            <ChevronRight size={14} className="page-nav__sep" aria-hidden="true" />
+            <Link to={to} className="page-nav__home">
+              {label}
+            </Link>
+          </li>
+        ))}
         {current && (
           <li aria-current="page">
             <ChevronRight size={14} className="page-nav__sep" aria-hidden="true" />

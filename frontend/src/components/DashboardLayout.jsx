@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom';
-import { House, LogOut } from 'lucide-react';
+import { House, LogOut, ReceiptText, ShoppingBasket } from 'lucide-react';
 import ColorfulBackground from './ColorfulBackground.jsx';
 import BlendedLogo from './BlendedLogo.jsx';
 import PageNav from './PageNav.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useCart } from '../context/CartContext.jsx';
 import { ROLES, displayName } from '../utils/roles.js';
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({ children, crumb, trail }) {
   const { user, logout } = useAuth();
+  const cart = useCart();
   const isRestaurant = user?.role === ROLES.RESTAURANT;
 
   return (
@@ -22,6 +24,27 @@ export default function DashboardLayout({ children }) {
           <Link to="/" className="nav__link">
             <House size={16} aria-hidden="true" /> <span className="hide-sm">Home</span>
           </Link>
+          {isRestaurant ? (
+            <Link to="/restaurant?tab=orders" className="nav__link nav__link--keep" aria-label="Orders">
+              <ReceiptText size={16} aria-hidden="true" /> <span className="hide-sm">Orders</span>
+            </Link>
+          ) : (
+            <>
+              <Link to="/orders" className="nav__link nav__link--keep" aria-label="My orders">
+                <ReceiptText size={16} aria-hidden="true" /> <span className="hide-sm">My orders</span>
+              </Link>
+              {cart.count > 0 && (
+                <Link
+                  to="/checkout"
+                  className="nav__cart"
+                  aria-label={`Cart, ${cart.count} ${cart.count === 1 ? 'item' : 'items'}`}
+                >
+                  <ShoppingBasket size={18} aria-hidden="true" />
+                  <span className="nav__cart-count">{cart.count}</span>
+                </Link>
+              )}
+            </>
+          )}
           <div className="user-chip">
             <span className="user-chip__avatar" aria-hidden="true">
               {displayName(user).charAt(0).toUpperCase()}
@@ -39,7 +62,12 @@ export default function DashboardLayout({ children }) {
         </div>
       </header>
       <main className="dashboard">
-        <PageNav current={isRestaurant ? 'My restaurant' : 'Restaurants'} className="page-nav--dashboard" />
+        <PageNav
+          current={crumb ?? (isRestaurant ? 'My restaurant' : 'Restaurants')}
+          trail={trail}
+          fallback={trail?.length ? trail[trail.length - 1].to : '/'}
+          className="page-nav--dashboard"
+        />
         {children}
       </main>
     </div>

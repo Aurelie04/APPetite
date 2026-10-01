@@ -6,6 +6,9 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ClientDashboard from './pages/ClientDashboard.jsx';
 import RestaurantDashboard from './pages/RestaurantDashboard.jsx';
+import RestaurantDetailPage from './pages/RestaurantDetailPage.jsx';
+import CheckoutPage from './pages/CheckoutPage.jsx';
+import OrdersPage from './pages/OrdersPage.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import { useAuth } from './context/AuthContext.jsx';
 import { ROLES, dashboardPath } from './utils/roles.js';
@@ -32,10 +35,34 @@ export default function App() {
         }
       />
       <Route
+        path="/checkout"
+        element={
+          <ProtectedRoute roles={[ROLES.CUSTOMER]}>
+            <CheckoutPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orders"
+        element={
+          <ProtectedRoute roles={[ROLES.CUSTOMER]}>
+            <OrdersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/restaurant"
         element={
           <ProtectedRoute roles={[ROLES.RESTAURANT]}>
             <RestaurantDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/restaurants/:id"
+        element={
+          <ProtectedRoute roles={[ROLES.CUSTOMER, ROLES.RESTAURANT]}>
+            <RestaurantDetailPage />
           </ProtectedRoute>
         }
       />

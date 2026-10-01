@@ -21,9 +21,19 @@ export default function useApiResource(fetcher) {
     }
   }, [fetcher, token, logout]);
 
+  /** Background refresh: keeps the current data on failure instead of showing an error. */
+  const refresh = useCallback(async () => {
+    try {
+      setData(await fetcher(token));
+      setError('');
+    } catch (err) {
+      if (err.status === 401) logout();
+    }
+  }, [fetcher, token, logout]);
+
   useEffect(() => {
     load();
   }, [load]);
 
-  return { data, setData, error, loading, reload: load };
+  return { data, setData, error, loading, reload: load, refresh };
 }

@@ -14,7 +14,7 @@ const FEATURES = [
 
 const STATS = [
   { value: '50+', label: 'Restaurants' },
-  { value: '25 min', label: 'Avg. delivery' },
+  { value: 'On time', label: 'Every delivery' },
   { value: '4.9', label: 'Customer rating', icon: Star },
 ];
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
               <Flame size={16} /> Hot deals today
             </div>
             <div className="badge badge--time">
-              <Clock size={16} /> Delivered in 25 min
+              <Clock size={16} /> Always on time
             </div>
           </div>
 

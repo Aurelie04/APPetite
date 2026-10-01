@@ -14,6 +14,12 @@ public final class ValidationPatterns {
 
     public static final String PHONE_OPTIONAL = "^$|^[+0-9 ()-]{6,20}$";
 
+    /** Free text (menu names, categories, opening hours): no angle brackets or control characters. */
+    public static final String SAFE_TEXT = "^[^<>\\p{Cntrl}]*$";
+
+    /** ISO 4217 currency code. */
+    public static final String CURRENCY = "^[A-Z]{3}$";
+
     private ValidationPatterns() {
     }
 }

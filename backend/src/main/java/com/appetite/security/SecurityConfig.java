@@ -52,7 +52,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/error").permitAll()
-                        .requestMatchers("/api/restaurants/me").hasRole(Role.RESTAURANT.name())
+                        .requestMatchers("/api/restaurants/me", "/api/restaurants/me/**").hasRole(Role.RESTAURANT.name())
+                        .requestMatchers("/api/orders", "/api/orders/**").hasRole(Role.CUSTOMER.name())
+                        .requestMatchers(HttpMethod.GET, "/api/restaurants/*/logo").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) -> writeError(response, HttpStatus.UNAUTHORIZED,

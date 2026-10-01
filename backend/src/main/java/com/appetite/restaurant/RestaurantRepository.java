@@ -8,9 +8,12 @@ import java.util.Optional;
 
 public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
 
-    @EntityGraph(attributePaths = "owner")
+    @EntityGraph(attributePaths = {"owner", "paymentMethods", "serviceOptions"})
     List<Restaurant> findAllByOrderByCreatedAtDesc();
 
-    @EntityGraph(attributePaths = "owner")
+    @EntityGraph(attributePaths = {"owner", "paymentMethods", "serviceOptions"})
     Optional<Restaurant> findByOwnerEmailIgnoreCase(String email);
+
+    @EntityGraph(attributePaths = {"owner", "paymentMethods", "serviceOptions"})
+    Optional<Restaurant> findWithDetailsById(Long id);
 }

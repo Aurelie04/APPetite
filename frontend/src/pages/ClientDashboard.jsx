@@ -5,13 +5,22 @@ import RestaurantCard from '../components/RestaurantCard.jsx';
 import Alert from '../components/Alert.jsx';
 import { restaurantApi } from '../api/client.js';
 import useApiResource from '../hooks/useApiResource.js';
+import { SERVICE_OPTIONS, acceptsOnline } from '../utils/restaurantOptions.js';
 
 const ALL = 'All';
+
+/** Quick filters on services and payment options; a restaurant must match every selected one. */
+const OPTION_FILTERS = [
+  ...SERVICE_OPTIONS.map((s) => ({ id: s.value, label: s.label, test: (r) => r.serviceOptions?.includes(s.value) })),
+  { id: 'CASH', label: 'Cash on arrival', test: (r) => r.paymentMethods?.includes('CASH_ON_ARRIVAL') },
+  { id: 'ONLINE', label: 'Pay online', test: (r) => acceptsOnline(r.paymentMethods) },
+];
 
 export default function ClientDashboard() {
   const { data: restaurants, error, loading, reload } = useApiResource(restaurantApi.list);
   const [query, setQuery] = useState('');
   const [cuisine, setCuisine] = useState(ALL);
+  const [options, setOptions] = useState([]);
 
   const cuisines = useMemo(() => {
     const set = new Set((restaurants ?? []).map((r) => r.cuisine).filter(Boolean));
@@ -20,12 +29,17 @@ export default function ClientDashboard() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const activeFilters = OPTION_FILTERS.filter((f) => options.includes(f.id));
     return (restaurants ?? []).filter((r) => {
       if (cuisine !== ALL && r.cuisine !== cuisine) return false;
+      if (!activeFilters.every((f) => f.test(r))) return false;
       if (!q) return true;
       return [r.name, r.cuisine, r.description, r.address].some((v) => v?.toLowerCase().includes(q));
     });
-  }, [restaurants, query, cuisine]);
+  }, [restaurants, query, cuisine, options]);
+
+  const toggleOption = (id) => setOptions((list) => (list.includes(id) ? list.filter((o) => o !== id) : [...list, id]));
+  const hasFilters = query || cuisine !== ALL || options.length > 0;
 
   return (
     <DashboardLayout>
@@ -68,6 +82,22 @@ export default function ClientDashboard() {
         </div>
       )}
 
+      {restaurants?.length > 0 && (
+        <div className="filters filters--options" role="toolbar" aria-label="Filter by services and payment">
+          {OPTION_FILTERS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              className={`filter filter--option ${options.includes(id) ? 'filter--active' : ''}`}
+              onClick={() => toggleOption(id)}
+              aria-pressed={options.includes(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {error && (
         <div className="panel">
           <Alert>{error}</Alert>
@@ -88,7 +118,7 @@ export default function ClientDashboard() {
       {!loading && !error && visible.length > 0 && (
         <div className="grid">
           {visible.map((r) => (
-            <RestaurantCard key={r.id} restaurant={r} />
+            <RestaurantCard key={r.id} restaurant={r} to={`/restaurants/${r.id}`} />
           ))}
         </div>
       )}
@@ -96,12 +126,25 @@ export default function ClientDashboard() {
       {!loading && !error && visible.length === 0 && (
         <div className="panel empty">
           <Store size={40} aria-hidden="true" />
-          <h2>{restaurants?.length ? 'No restaurant matches your search' : 'No restaurants yet'}</h2>
+          <h2>{restaurants?.length ? 'No restaurant matches your filters' : 'No restaurants yet'}</h2>
           <p>
             {restaurants?.length
-              ? 'Try another keyword or cuisine.'
+              ? 'Try another keyword, cuisine or option.'
               : 'Restaurants will appear here as soon as they register on Appétite.'}
           </p>
+          {hasFilters && restaurants?.length > 0 && (
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={() => {
+                setQuery('');
+                setCuisine(ALL);
+                setOptions([]);
+              }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
     </DashboardLayout>
